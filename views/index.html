@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>osu! rebalance calculator</title>
+    <meta name="description" content="recalculate profile to xexxar_skills sr">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/themes/prism.min.css" integrity="sha256-77qGXu2p8NpfcBpTjw4jsMeQnz0vyh74f5do0cWjQ/Q=" crossorigin="anonymous" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/prism.min.js" integrity="sha256-NFZVyNmS1YlmiklazBA+TALYJlJtZj/y/i/oADk6CVE=" crossorigin="anonymous"></script>
+
+    <script>
+        $(document).ready(function() {
+            $("#sub").click(get_info)
+            $("#prog").hide()
+        })
+
+        function block_check() {
+            M.toast({
+                html: "Please wait until last check is complete."
+            })
+            return
+        }
+
+        function get_info() {
+
+            M.toast({
+                html: 'Getting info...'
+            })
+
+            $("#user_result").empty()
+            $("blockquote").empty()
+            $("#user_result").html('<ul class="collapsible expandable"></ul>"')
+            $("#user_result").hide()
+            $("blockquote").hide()
+            $("#sub").off("click")
+            $("#sub").click(block_check)
+            $("#prog").show()
+
+            var user = $("#textarea1").val()
+            const base_url = "c?user="
+
+            $.ajax({
+                url: base_url + user,
+                method: 'GET',
+                dataType: "json",
+                headers: {
+                    'Access-Control-Allow-Origin': '*'
+                },
+                crossDomain: true,
+
+                success: function(data) {
+                    var plays = data.DisplayPlays
+                    $("#user_result").prepend("<b>Live pp</b>: " + Math.round(data.LivePP) + "<br><b>Local pp</b>: " + Math.round(data.LocalPP))
+                    for (var i = 0; i < plays.length; i++) {
+                        var dat = "Live pp: " + Math.round(plays[i].LivePP) + "<br>Local pp: " + Math.round(plays[i].LocalPP)
+                        $("ul").append('<li> <div class="collapsible-header">' + plays[i].BeatmapName + ' <span class="badge" data-badge-caption="pp">' + Math.round(plays[i].LocalPP) + '</span></div> <div class="collapsible-body"><span>' + dat + "</span></div></li>")
+                    }
+                    $('.collapsible').collapsible()
+                    $("#user_result").show()
+                    M.toast({
+                        html: 'Done!'
+                    })
+                    $("#sub").off("click")
+                    $("#sub").click(get_info)
+                    $("#prog").hide()
+                },
+
+                error: function(err) {
+                    if (err.responseJSON) {
+                      if (err.responseJSON.stderr) {
+                          $("blockquote").html("Error: <br>" + err.responseJSON.stderr.replace(/(?:\r\n|\r|\n)/g, '<br>'))
+                      } else if (err.responseJSON.err) {
+                          $("blockquote").html("Error: " + err.responseJSON.err)
+                      }
+                    } else if (err.status == 504) {
+                        $("blockquote").html("Error: Gateaway Error, maybe server is overloaded, sorry.")
+                    } else {
+                      $("blockquote").html("Error: HTTP error code " + err.status)
+                    }
+                    $("blockquote").show()
+                    $("#sub").off("click")
+                    $("#sub").click(get_info)
+                    $("#prog").hide()
+                }
+            })
+        }
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <h2>
+         osu! rebalance calculator
+        </h2>
+        <p>
+            Based on VINXIS' joz branch on <a href="https://github.com/VINXIS/osu/tree/joz" target="_blank">his osu repo</a>
+            <br> Last updated: 7/7/2019 (3cd7cc2476604529d64897d5af47959e3fa3e0fc)
+        </p>
+        <hr>
+        <p>
+            <h5>Warn:</h5>
+            <br><img src="https://puu.sh/DO6fl/40e5262729.png" />
+            <br>
+            <b>This calc might not be accurate, might crash unexpectedly, and is subject to change along as VINXIS' joz branch</b>, that means this calculator would change over time.
+        </p>
+        <hr>
+        <br>
+        <!--  Text Input -->
+        <div class="row center">
+            <div class="col s12">
+                <div class="input-field col s9">
+                    <input placeholder="-Keitaro" id="textarea1" type="text" class="validate">
+                    <label for="textarea1">Username/User ID</label>
+                </div>
+                <button id="sub" class="waves-effect waves-light btn-large s3" type="submit" name="action">Check
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Progress -->
+        <div class="progress">
+            <div id="prog" class="indeterminate"></div>
+        </div>
+
+        <!--  Output -->
+        <div id="user_result">
+        </div>
+
+        <!-- Error -->
+        <blockquote>
+        </blockquote>
+
+        <!-- API -->
+        <div id="api_docs">
+            <h2 id="api">API</h2>
+
+            <h3 id="cuserusername">/c?user=[Username]</h3>
+            <p>Gets post-rebalance info about [Username]</p>
+
+            <h4 id="parameter">Parameter</h4>
+            <p>user : String = Target player's username</p>
+
+            <h4 id="response">Response</h4>
+            <p>A JSON object containing post-rebalance info</p>
+
+            <pre><code class="json language-json">{
+    'LivePP'      : 15895.8,                // Current osu! pp 
+    'LocalPP'     : 9720.24226643739,       // Post-rebalance pp
+    'BonusPP'     : 334.3135497559342
+    'Username'    : 'idke',
+    'DisplayPlays': [{
+        "BeatmapID"    :1745634,
+        "BeatmapName"  :"Demetori - Koyoi wa Hyouitsu na Egoist ~ Ego, Schizoid, Beat. (Crissa) [Yorigami]",
+        "LivePP"       :753.873,
+        "LocalPP"      :596.2800547115783,
+        "PPDelta"      :-157.5929452884218,
+        "PositionDelta":16
+    }, { ... }, { ... }]
+}
+</code></pre>
+        </div>
+    </div>
+</body>
+
+<footer class="page-footer">
+    <div class="footer-copyright">
+        <div class="container">
+            Made by -Keitaro | <a href="https://osu.ppy.sh/u/-Keitaro">osu!</a> - <a href="https://github.com/rorre">Github</a> - <a href="https://glitch.com/~osusr">Glitch Project</a>
+        </div>
+    </div>
+</footer>
+
+</html>
